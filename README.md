@@ -1,3 +1,6 @@
+> [!NOTE]
+> Development may be slow at times, but this project is still maintained even if the last commit was made a while ago.
+
 # Proton-For-Old-Vulkan or "Sarek"
 
 Sarek (Proton-For-Old-Vulkan): A custom Proton build with [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek) for users with GPUs that support Vulkan 1.1+ but not Vulkan 1.3, or for those with non-Vulkan support who want a plug-and-play option featuring personal patches.
