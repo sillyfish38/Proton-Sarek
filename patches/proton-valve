@@ -982,6 +982,7 @@ class CompatData:
                     "vcomp1*.dll," +
                     "vccorlib1*.dll," +
                     "vcruntime1*.dll," +
+                    "ucrtbase.dll," +
 
                     #some games balk at ntdll symlink(?)
                     "ntdll.dll," +
@@ -1194,17 +1195,16 @@ def default_compat_config():
     if "SteamAppId" in os.environ:
         appid = os.environ["SteamAppId"]
         if appid in [
-                #affected by CW bug 22265
-                "692890", #Roboquest
-
                 #affected by CW bug 19741
                 "1017900", #Age of Empires: Definitive Edition
 
                 #affected by CW bug 20240
                 "1331440", #FUSER
 
-                #CW bug 24913
-                "2620730",
+                #affected by Unity race
+                "2620730", #DEVIATOR - CW bug 24913
+                "2882920", #SSR Wives: The Murder Of My Winter Crush Demo - CW bug 25730
+                "2712910", #Spark & Kling - CW bug 25778
                 ]:
             ret.add("nomfdxgiman")
 
@@ -1247,14 +1247,20 @@ def default_compat_config():
                 # Other issues arising from OWPR code path in apps, e. g., hitting unimplemented bits in
                 # d3dcompiler.
                 "230410", #Warframe
+                "3513350", #Wuthering Waves
+                "3728370",
                 ]:
             ret.add("noopwr")
 
-        if appid == "1621680":
+        if appid in [
+                "2710",     #Act of War: Direct Action
+                "1621680",  #Sword and Fairy 4
+                ]:
             ret.add("noforcelgadd")
 
         if appid in [
                 "257420", #Serious Sam 4
+                "2021880", #Ara: History Untold
                 ]:
             ret.add("hidevggpu")
 
@@ -1286,6 +1292,7 @@ def default_compat_config():
                 "2842040", #Star Wars Outlaws
                 "245300", #Disney Epic Mickey 2: The Power of Two
                 "2594920", #Atelier Resleriana: Forgotten Alchemy and the Polar Night Liberator
+                "2586520", #Atelier Resleriana [JP]
                 "3209830", #Stronghold Crusader: Definitive Edition Demo
                 "3024040", #Stronghold Crusader: Definitive Edition
                 "2433890", #Stronghold: Definitive Edition Demo
@@ -1298,6 +1305,15 @@ def default_compat_config():
                 "2531310", #The Last of Us Part II Remastered
                 "2564460", #Banter
                 "2680010", #The First Berserker: Khazan
+                "3438330", #Firefly Village Demo
+                "3393740", #Firefly Village
+                "2840770", #Avatar: Frontiers of Pandora
+                "429660", #Tales of Berseria
+                "1286220", #Sea Power
+                "2827230", #Wild Assault
+                "3159330", #Assassin's Creed Shadows
+                "367500", #Dragon's Dogma: Dark Arisen
+                "1890220", #Figmin XR
                 ]:
             ret.add("gamedrive")
 
@@ -1309,6 +1325,7 @@ def default_compat_config():
                 "2052410", #WITCH ON THE HOLY NIGHT
                 "789910", #Planet of the Apes: Last Frontier
                 "1183470", #Imperiums: Greek Wars
+                "876340", #VR Slots 3D
                 ]:
             ret.add("heapdelayfree")
 
@@ -1341,24 +1358,43 @@ def default_compat_config():
                 "1418100", #Swords of Legends Online
                 "2080180", #Go Home Annie Demo
                 "1939100", #Go Home Annie
-                "108710", #Alan Wake
                 "435150", #Divinity: Original Sin 2 - Definitive Edition
-                "505170", #Carmageddon: Max Damage
+                "2176900", #Fablecraft
+                "2853730", #Skull and Bones
+                ]:
+            ret.add("disablenvapi")
+
+        if appid in [
+                "1808500", #ARC Raiders
+                "2073850", #The Finals
+                "108710", #Alan Wake
                 "202750", #Alan Wake's American Nightmare
+                "505170", #Carmageddon: Max Damage
                 "255220", #GRID Autosport
                 "44350", #GRID 2
-                "2176900", #Fablecraft
                 "407810", #Hard Reset Redux
-                "2853730", #Skull and Bones
                 "233130", #Shadow Warrior
                 "2067160", #Simulakros
                 "2621010", #Simulakros Demo
                 "368500", #Assassin's Creed Syndicate
                 ]:
-            ret.add("disablenvapi")
+            try:
+                with open('/proc/modules') as f:
+                    drivers = set([line.partition(' ')[0] for line in f.read().splitlines()])
+                    if not drivers.intersection({'nvidia', 'nouveau', 'nova'}):
+                        ret.add("disablenvapi")
+            except OSError:
+                ret.add("disablenvapi")
+
 
         if appid in [
-                "2395210" #Tony Hawk's Pro Skater 1 + 2
+                "2698940", #The Crew Motorfest
+                ]:
+            ret.add("hidenvgpu")
+
+        if appid in [
+                "2395210", #Tony Hawk's Pro Skater 1 + 2
+                "1577120", #The Quarry
                 ]:
             ret.add("forcenvapi")
 
@@ -1366,6 +1402,14 @@ def default_compat_config():
                 "1252330" #Deathloop
                 ]:
             ret.add("hideapu")
+
+        if appid in [
+                "249610", # Galactic Arms Race
+                "287240", # Eterium Demo
+                "280200", # Eterium
+                "1072860", # Real Scary
+                ]:
+            ret.add("fnad3d11")
 
     #options to also be enabled for prerequisite setup steps
     if "STEAM_COMPAT_APP_ID" in os.environ:
@@ -1378,6 +1422,7 @@ def default_compat_config():
 
         if appid in [
                 "255960", #Bad Mojo Redux
+                "2471120", #Rocket Jockey
                 ]:
             ret.add("gamedrive")
 
@@ -1402,6 +1447,12 @@ default_cpu_limit = {
     "618970"    :  4,   # Outcast - Second Contact
     "10150"     :  8,   # Prototype
     "2229830"   :  1,   # Command & Conquer and The Covert Operations
+    "259170"    :  8,   # Alone in the Dark (2008)
+    "11440"     :  4,   # DiRT
+    "316260"    :  16,  # Disney Universe
+    "286810"    :  30,  # Hard Truck Apocalypse: Rise of Clans / Ex Machina: Meridian 113
+    "70000"     :  28,  # Dino D-Day
+    "115320"    :  8,   # Prototype 2
 }
 
 class Session:
@@ -1421,7 +1472,7 @@ class Session:
         if os.environ.get("SteamGameId", 0) == "352130":
             del self.dlloverrides["steam.exe"]
 
-        if os.environ.get("SteamGameId", 0) not in ["2767030"]:
+        if os.environ.get("SteamGameId", 0) not in ["2767030", "2274200"]:
             self.dlloverrides["opencl"] = "n,d"
 
         self.compat_config = default_compat_config()
@@ -1450,6 +1501,16 @@ class Session:
             self.env["WINE_CPU_TOPOLOGY"] = self.env["PROTON_CPU_TOPOLOGY"]
         elif appid in default_cpu_limit:
             self.env["WINE_CPU_TOPOLOGY"] = str(default_cpu_limit[appid])
+
+        if "WINE_HIDE_AMD_GPU" not in self.env and appid in [
+                    "1282690",
+                ]:
+            self.env["WINE_HIDE_AMD_GPU"] = "1"
+
+        if "WINE_DISABLE_GAMESCOPE_MAX_SIZE_HACK" not in self.env and appid in [
+                    "3754990",
+                ]:
+            self.env["WINE_DISABLE_GAMESCOPE_MAX_SIZE_HACK"] = "1"
 
     def init_wine(self):
         if "HOST_LC_ALL" in self.env and len(self.env["HOST_LC_ALL"]) > 0:
@@ -1653,8 +1714,11 @@ class Session:
             if self.env["PROTON_LOG"] != "1":
                 append_to_env_str(self.env, "WINEDEBUG", self.env["PROTON_LOG"], ",")
 
-        #disable XIM support until libx11 >= 1.7 is widespread
-        self.env.setdefault("WINE_ALLOW_XIM", "0")
+        #for performance, logging is disabled by default; override with user_settings.py
+        self.env.setdefault("WINEDEBUG", "-all")
+        self.env.setdefault("DXVK_LOG_LEVEL", "none")
+        self.env.setdefault("VKD3D_DEBUG", "none")
+        self.env.setdefault("VKD3D_SHADER_DEBUG", "none")
 
         if "wined3d11" in self.compat_config:
             self.compat_config.add("wined3d")
@@ -1685,9 +1749,6 @@ class Session:
         else:
             self.env["WINEESYNC"] = "1"
 
-        if "noxim" not in self.compat_config:
-            self.env.pop("WINE_ALLOW_XIM")
-
         if "nofsync" in self.compat_config:
             self.env.pop("WINEFSYNC", "")
         else:
@@ -1704,6 +1765,7 @@ class Session:
                 "558260", #Gravel
                 "386360", #SMITE
                 "487720", #Agony
+                "879420", #Agony UNRATED
                 "649950", #Ashen
                 "1150080", #Azur Lane: Crosswave
                 "463150", #BARRIER X
@@ -1761,6 +1823,20 @@ class Session:
         if os.environ.get("SteamGameId", 0) == "500810":
             self.dlloverrides["ddraw"] = "n,b"
 
+        # CW Bug 26050
+        if os.environ.get("SteamGameId", 0) == "3780660":
+            self.dlloverrides["dinput"] = "n,b"
+
+        # CW Bug 26133
+        if os.environ.get("SteamGameId", 0) == "2471120":
+            self.dlloverrides["winmm"] = "n,b"
+
+        # CW Bug 26376
+        self.dlloverrides["gameinput"] = "d"
+        if os.environ.get("SteamGameId", 0) == "3773590":
+            # CW Bug 26159
+            self.dlloverrides["gameinput"] = "n,b"
+
         if "PROTON_LIMIT_RESOLUTIONS" not in self.env:
             if os.environ.get("SteamGameId", 0) in [
                     "39540", #SpellForce: Platinum Edition
@@ -1770,6 +1846,7 @@ class Session:
                     "524220", #NieR: Automata
                     "814380", #Sekiro: Shadows Die Twice
                     "374320", #DARK SOULS III
+                    "357190", #Ultimate Marvel vs Capcom 3
                     ]:
                 self.env["PROTON_LIMIT_RESOLUTIONS"] = "32"
 
@@ -1832,6 +1909,14 @@ class Session:
 
         if "PROTON_CRASH_REPORT_DIR" in self.env:
             self.env["WINE_CRASH_REPORT_DIR"] = self.env["PROTON_CRASH_REPORT_DIR"]
+
+        if (os.environ.get("SteamGameId", 0) == "2322010" and    # God of War: Ragnarok
+            os.environ.get("SteamDeck", 0) == "1"):
+            # Disable hidraw for Sony DualShock and DualSense controllers.
+            self.env["PROTON_DISABLE_HIDRAW"] = "0x054C/0x05C4,0x054C/0x09CC,0x054C/0x0BA0,0x054C/0x0CE6,0x054C/0x0DF2"
+
+        if "fnad3d11" in self.compat_config and "FNA3D_FORCE_DRIVER" not in self.env:
+            self.env["FNA3D_FORCE_DRIVER"] = "D3D11"
 
         # NVIDIA software may check for the "DriverStore" by querying the
         # NGXCore\NGXPath registry key via `D3DDDI_QUERYREGISTRY_SERVICEKEY` for
@@ -1921,6 +2006,19 @@ class Session:
             self.env["DXVK_NVAPI_ALLOW_OTHER_DRIVERS"] = "1"
             self.env["DXVK_NVAPI_DRIVER_VERSION"] = "99999"
             self.env["WINE_HIDE_AMD_GPU"] = "1"
+
+        if not ("WINEDLLOVERRIDES" in g_session.env and "atiadlxx" in g_session.env["WINEDLLOVERRIDES"]) and "SteamAppId" in os.environ:
+            if os.environ["SteamAppId"] in [
+                    "2767030",
+                ]:
+                g_session.dlloverrides["atiadlxx"] = "b"
+
+        if not ("PROTON_LIMIT_ADDRESS_SPACE" in g_session.env) and "SteamAppId" in os.environ:
+            if os.environ["SteamAppId"] in [
+                    "1282270",
+                    "2963870",
+                ]:
+                self.env["PROTON_LIMIT_ADDRESS_SPACE"] = "1"
 
         s = ""
         for dll in self.dlloverrides:
