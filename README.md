@@ -1,5 +1,5 @@
 > [!NOTE]
-> Development may be slow at times, but this project is still maintained even if the last commit was made a while ago.
+> **This project its UNSUPPORTED.** and have been replaced by [proton-cachyos](https://github.com/CachyOS/proton-cachyos) as the supported DXVK-Sarek Proton build (requires `PROTON_DXVK_SAREK=1` to use Sarek instead of regular DXVK)
 
 # Proton-For-Old-Vulkan or "Sarek"
 
