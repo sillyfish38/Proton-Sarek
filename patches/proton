@@ -6,6 +6,7 @@ import fcntl
 import array
 import fnmatch
 import os
+import re
 import shutil
 import errno
 import platform
@@ -1086,6 +1087,7 @@ class CompatData:
             use_nvapi = (('disablenvapi' not in g_session.compat_config or 'forcenvapi' in g_session.compat_config) and
                         g_proton.host_pe_arch != "aarch64-windows")
             use_dxvk_d3d8 = "dxvkd3d8" in g_session.compat_config
+            use_d7vkddraw = "d7vkddraw" in g_session.compat_config
 
             builtin_dll_copy = os.environ.get("PROTON_DLL_COPY",
                     #dxsetup redist
@@ -1143,6 +1145,7 @@ class CompatData:
                 builtin_dll_copy,
                 str(use_nvapi),
                 str(use_dxvk_d3d8),
+                str(use_d7vkddraw),
             ))
 
             # check whether any prefix config has changed
@@ -1212,6 +1215,7 @@ class CompatData:
                 try_copy(g_proton.arch_pe_dir("wine/dxvk", False) + "openvr_api_dxvk.dll", "drive_c/windows/system32",
                         prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
 
+                #copy x86_64 wineopenxr files into place
                 makedirs(self.prefix_dir + "/drive_c/openxr")
                 try_copy(g_proton.dist_dir + "share/openxr/wineopenxr64.json", "drive_c/openxr",
                         prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
@@ -1248,6 +1252,7 @@ class CompatData:
                             prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
                     try_copy(g_proton.arch_pe_dir("wine/dxvk", True) + f + ".dll", "drive_c/windows/syswow64",
                             prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+
                     g_session.dlloverrides[f] = "n"
 
                 for f in vkd3d_protonfiles:
@@ -1258,7 +1263,18 @@ class CompatData:
                             prefix=self.prefix_dir, track_file=tracked_files, link_debug=True, optional=optional)
                     try_copy(g_proton.arch_pe_dir("wine/vkd3d-proton", True) + f + ".dll", "drive_c/windows/syswow64",
                             prefix=self.prefix_dir, track_file=tracked_files, link_debug=True, optional=optional)
+
                     g_session.dlloverrides[f] = "n"
+
+                if use_d7vkddraw:
+                    try_copy(g_proton.default_pfx_dir + "drive_c/windows/syswow64/ddraw.dll", "drive_c/windows/syswow64/ddraw_.dll",
+                            prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+                    try_copy(g_proton.arch_pe_dir("wine/dxvk", True) + "ddraw.dll", "drive_c/windows/syswow64",
+                            prefix=self.prefix_dir, track_file=tracked_files, link_debug=True, optional=optional)
+                    g_session.dlloverrides["ddraw"] = "n,b"
+                else:
+                    try_copy(g_proton.default_pfx_dir + "drive_c/windows/syswow64/ddraw.dll", "drive_c/windows/syswow64",
+                            prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
 
                 for f in icufiles:
                     dst = "drive_c/windows/system32/" + f + ".dll"
@@ -1381,6 +1397,7 @@ def default_compat_config():
         if appid in [
                 "2710",     #Act of War: Direct Action
                 "1621680",  #Sword and Fairy 4
+                "888040",   #Metal Fatigue
                 ]:
             ret.add("noforcelgadd")
 
@@ -1441,6 +1458,7 @@ def default_compat_config():
                 "367500", #Dragon's Dogma: Dark Arisen
                 "1890220", #Figmin XR
                 "2058180", #Judgment
+                "3950020", #Duet Night Abyss
                 "2507950", #Delta Force
                 ]:
             ret.add("gamedrive")
@@ -1542,6 +1560,7 @@ def default_compat_config():
                 "249610", # Galactic Arms Race
                 "287240", # Eterium Demo
                 "280200", # Eterium
+                "312530", # Duck Game
                 "1072860", # Real Scary
                 ]:
             ret.add("fnad3d11")
@@ -1551,7 +1570,10 @@ def default_compat_config():
         appid = os.environ["STEAM_COMPAT_APP_ID"]
 
         if appid in [
+                "1026680", #FINAL FANTASY VIII - REMASTERED
+                "3280350", #DEATH STRANDING 2: ON THE BEACH
                 "3513350", #Wuthering Waves
+                "3837340", #FINAL FANTASY VII
                 ]:
             ret.add("noxalia")
 
@@ -1704,6 +1726,7 @@ class Session:
         if os.environ.get("PROTON_MEDIACONV_NO_VIDEO",
             "1" if os.environ.get("SteamGameId", 0) in (
                 "283640", # Salt and Sanctuary
+                "455490", # Don't Die Dateless, Dummy!
                 "787810", # Rogue Heroes: Ruins of Tasos
                 "1199570", # Rogue Heroes: Ruins of Tasos Demo
                 "1491460", # Tor Eternum
@@ -1805,6 +1828,30 @@ class Session:
             app_config["Config"]["SilentLog"] = "0" if self.log_enabled_for("fex", True) else "1"
 
         return app_config
+
+    def get_primary_monitor(self):
+        try:
+            result = subprocess.run(
+                ["xrandr"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            print("Error: xrandr is not installed or not in PATH.", file=sys.stderr)
+            sys.exit(1)
+        except subprocess.CalledProcessError as e:
+            print(f"Error: failed to run xrandr: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        for line in result.stdout.splitlines():
+            # Example:
+            # HDMI-A-1 connected primary 3840x2160+3840+0 ...
+            match = re.match(r"^(\S+)\s+connected\s+primary\b", line)
+            if match:
+                return match.group(1)
+
+        return None
 
     def init_session(self, update_prefix_files):
         self.env["WINEPREFIX"] = g_compatdata.prefix_dir
@@ -1928,6 +1975,7 @@ class Session:
 
         if not self.check_environment("PROTON_USE_WINED3D", "wined3d"):
             self.check_environment("PROTON_USE_WINED3D11", "wined3d")
+        self.check_environment("PROTON_D7VK_DDRAW", "d7vkddraw")
         self.check_environment("PROTON_NO_WM_DECORATION", "nowmdecoration")
         self.check_environment("PROTON_DXVK_D3D8", "dxvkd3d8")
         self.check_environment("PROTON_NO_D3D11", "nod3d11")
@@ -2274,6 +2322,14 @@ class Session:
 
         # Don't use wayland backend when WAYLAND_DISPLAY is not set
         if "wayland" in self.compat_config and "WAYLAND_DISPLAY" in self.env:
+            # Set primary monitor if given
+            if "PROTON_WAYLAND_MONITOR" in self.env:
+                self.env["WAYLANDDRV_PRIMARY_MONITOR"] = self.env["PROTON_WAYLAND_MONITOR"]
+            # Try to determine the primary monitor if not given.
+            if "WAYLANDDRV_PRIMARY_MONITOR" not in self.env:
+                primary_monitor = self.get_primary_monitor()
+                if primary_monitor:
+                    self.env["WAYLANDDRV_PRIMARY_MONITOR"] = primary_monitor
             self.dlloverrides["winex11.drv"] = "d"
             self.dlloverrides["winewayland.drv"] = "b"
             if "WINE_WAYLAND_HACKS" not in self.env:
@@ -2383,7 +2439,7 @@ class Session:
                 argv = [g_proton.wine64_bin, "c:\\windows\\system32\\steam.exe"]
             elif len(sys.argv) >= 3 and sys.argv[2].startswith('/'):
                 log("Executable a unix path, launching with /unix option.")
-                argv = [g_proton.wine64_bin, "c:\\windows\\system32\\start.exe", "/unix"]
+                argv = [g_proton.wine64_bin, "c:\\windows\\system32\\umu.exe"]
             else:
                 log("Executable is inside wine prefix, launching normally.")
                 argv = [g_proton.wine64_bin]
