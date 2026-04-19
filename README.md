@@ -1,5 +1,15 @@
 > [!NOTE]
-> **This project its UNSUPPORTED.** and have been replaced by [proton-cachyos](https://github.com/CachyOS/proton-cachyos) as the supported DXVK-Sarek Proton build (requires `PROTON_DXVK_SAREK=1` to use Sarek instead of regular DXVK)
+> pythonlover02 decided to stop mantaining the main [Proton-Sarek repository](https://github.com/pythonlover02/Proton-Sarek) and archived it. This fork was created in order to keep updating the Proton-Sarek releases based on GE-Proton. You can use [proton-cachyos](https://github.com/CachyOS/proton-cachyos) which is "**the only officially supported way** to use DXVK-Sarek with Proton", see [DXVK-Sarek v1.12.0 "Late Anniversary" Released](https://github.com/pythonlover02/DXVK-Sarek/releases/tag/v1.12.0) for more information.
+
+This repository contains the Proton patches used to make Proton-Sarek releases. You can provide your own Proton build or use a precompiled one (GE-Proton works ootb).
+
+Proton-Sarek uses [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). Check the repository for more information.
+
+Async builds are deprecated, since DXVK-Sarek now includes **dyasync** enabled by default (use in multiplayer games at your own discretion). Dyasync can be disabled by setting `dxvk.enableDyasync = False` in `dxvk.conf`, in the `DXVK_CONFIG` environment variable, or by using the environment variable `DXVK_DISABLE_DYASYNC=1`.
+
+[D7VK](https://github.com/WinterSnowfall/d7vk) (D3D7/6/5/3 support) features have been ported to DXVK-Sarek. To use the added D3D3, 5, 6 and 7 support in Proton-Sarek, you need the `PROTON_D7VK_DDRAW=1` environment variable.
+
+Original README below:
 
 # Proton-For-Old-Vulkan or "Sarek"
 
