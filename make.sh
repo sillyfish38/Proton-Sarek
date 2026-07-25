@@ -14,7 +14,7 @@ if [ ! -d "$protondir" ]; then
   exit 1
 fi
 
-read -p "Please enter the version number (e.g., 10-4): " version_number
+read -p "Please enter the version number (e.g., 11-3): " version_number
 
 if [ -z "$version_number" ]; then
   echo "Error: Version number cannot be empty!"
@@ -29,6 +29,9 @@ cp -r "$SCRIPT_DIR/patches/dxvk/x32/"* "$protondir/files/lib/wine/dxvk/i386-wind
 
 echo "Copying dxvk 64-bit files..."
 cp -r "$SCRIPT_DIR/patches/dxvk/x64/"* "$protondir/files/lib/wine/dxvk/x86_64-windows/" || { echo "Failed to copy 64-bit dxvk files."; exit 1; }
+
+echo "Copying d7vk 32-bit files..."
+cp -r "$SCRIPT_DIR/patches/d7vk/x32/"* "$protondir/files/lib/wine/d7vk/i386-windows/" || { echo "Failed to copy 32-bit d7vk files."; exit 1; }
 
 echo "Updating proton file with version $FULL_VERSION..."
 sed "s/CURRENT_PREFIX_VERSION=\"Proton-Sarek\"/CURRENT_PREFIX_VERSION=\"$FULL_VERSION\"/" "$SCRIPT_DIR/patches/proton" > "$protondir/proton" || { echo "Failed to update proton file."; exit 1; }
