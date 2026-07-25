@@ -7,7 +7,7 @@ Proton-Sarek uses [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). Che
 
 Async builds are deprecated, since DXVK-Sarek now includes **dyasync** enabled by default (use in multiplayer games at your own discretion). Dyasync can be disabled by setting `dxvk.enableDyasync = False` in `dxvk.conf`, in the `DXVK_CONFIG` environment variable, or by using the environment variable `DXVK_DISABLE_DYASYNC=1`.
 
-[D7VK](https://github.com/WinterSnowfall/d7vk) (D3D7/6/5/3 support) features have been ported to DXVK-Sarek. To use the added D3D3, 5, 6 and 7 support in Proton-Sarek, you need the `PROTON_D7VK_DDRAW=1` environment variable.
+[D7VK](https://github.com/WinterSnowfall/d7vk) (D3D7/6/5/3 support) features have been ported to DXVK-Sarek. To use the added D3D3, 5, 6 and 7 support in Proton-Sarek, you need the `PROTON_USE_D7VK=1` environment variable.
 
 Original README below:
 
