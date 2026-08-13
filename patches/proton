@@ -46,7 +46,7 @@ import protonfixes
 #and edit it if needed.
 import utilities
 
-CURRENT_PREFIX_VERSION="Proton-Sarek11-3"
+CURRENT_PREFIX_VERSION="Proton-Sarek11-5"
 
 PFX="Proton: "
 ld_path_var = "LD_LIBRARY_PATH"
@@ -383,6 +383,18 @@ def getmtimestr(*path_fragments):
     except IOError:
         return "0"
 
+def get_validated_steamapps_parent(orig_path):
+    try:
+        path = os.path.realpath(orig_path)
+        if os.path.isdir(path) and os.path.basename(path) == "steamapps":
+            parent = os.path.dirname(path)
+            if os.access(parent, os.W_OK) and os.stat(path).st_dev == os.stat(parent).st_dev:
+                return parent
+    except: pass
+
+    log("Error: unable to use parent for game drive, path " + orig_path)
+    return orig_path
+
 def try_get_game_library_dir():
     if "STEAM_COMPAT_INSTALL_PATH" not in g_session.env or \
             "STEAM_COMPAT_LIBRARY_PATHS" not in g_session.env:
@@ -392,7 +404,7 @@ def try_get_game_library_dir():
     library_paths = g_session.env["STEAM_COMPAT_LIBRARY_PATHS"].split(":")
     for path in library_paths:
         if path in g_session.env["STEAM_COMPAT_INSTALL_PATH"]:
-            return path
+            return get_validated_steamapps_parent(path)
 
     return None
 
@@ -1680,14 +1692,6 @@ def default_compat_config():
                 ]:
             ret.add("nohardwarescheduling")
 
-        if appid in [
-                    "4920", #Natural Selection 2
-                    "552440", #The Talos Principle VR
-                    "257510", #The Talos Principle
-
-                ]:
-            ret.discard("gamedrive")
-
     if "STORE" in os.environ:
         store = os.environ["STORE"]
         if store in [
@@ -1778,6 +1782,74 @@ class Session:
             self.compat_config.add("forcelgadd")
 
         appid = os.environ.get("SteamGameId", 0)
+        if not appid:
+            umu_id = os.environ.get("UMU_ID", "")
+            if umu_id.startswith("umu-") and umu_id[4:].isdigit():
+                appid = umu_id[4:]
+
+        # These games "support" PS controller input but only provide Xbox icons
+        # It's better to remap PS hidraw to xinput to mimic xbox on these games.
+        # If we use native PS mappings that the game detects, the mappings are wrong.
+        # When forcing xinput and remapping internally, mappings are correct
+        # Even then, AC II still needs manual remapping of axby in-game. The rest are ok
+        if appid in [
+                "15100",   # Assassin's Creed
+                "33230",   # Assassin's Creed II
+                "260210",  # Assassin's Creed: Liberation HD
+                "368500",  # Assassin's Creed Syndicate
+                "201870",  # Assassin's Creed: Revelations
+                "277590",  # Assassin's Creed Freedom Cry
+                "311560",  # Assassin's Creed Rogue
+                "289650",  # Assassin's Creed Unity
+                "242050",  # Assassin's Creed IV: Black Flag
+                "354380",  # Assassin's Creed Chronicles: China
+                "359610",  # Assassin's Creed Chronicles: India
+                "359600",  # Assassin's Creed Chronicles: Russia
+                "582660",  # Black Desert Online
+                ]:
+            self.env["PROTON_SONY_HIDRAW_XINPUT"] = "1"
+
+        # These games have perfect DS4 mappings, but do not support DS5/DS5 Edge.
+        # In this case we fake a DS4 controller for perfect button mappings and icons
+        if appid in [
+                "911400",  # Assassin's Creed III / Liberation Remastered
+                "812140",  # Assassin's Creed Odyssey
+                "582160",  # Assassin's Creed Origins
+                ]:
+            self.env["PROTON_SONY_DUALSENSE_AS_DUALSHOCK4"] = "1"
+
+        # MH Wilds strictly relies on Steam Input. We have a patch for lsteamclient
+        # which fakes steam input. When it does this, we remap DS4/DS5/DS5 Edge to xinput
+        # then forward all xinput devices to the fake steam input device
+        # This allows the controllers to work without needing steam input since we fake it
+        # This is also useful for wine-wayland since steam overlay is currently disabled.
+        if appid in [
+                "2246340", # Monster Hunter Wilds
+                ]:
+            self.env["PROTON_SONY_HIDRAW_XINPUT"] = "1"
+            self.env["PROTON_STEAMINPUT_XINPUT_FALLBACK"] = "1"
+
+        # Work around quirk caused by our Dynamic exe relocation patch
+        if appid in [
+                "201870",  # Assassin's Creed: Revelations
+                ]:
+            self.env["WINE_DISABLE_EXE_ASLR"] = "1"
+
+        # Work around MH Wilds audio device quirk
+        if appid in [
+                "2246340", # Monster Hunter Wilds
+                ]:
+            self.env["PROTON_ENABLE_MHWILDS_USB_AUDIO"] = "1"
+
+        if "PROTON_PIPEWIRE_ALSA_PLUGIN" not in self.env:
+            if g_proton.host_pe_arch == "aarch64-windows":
+                alsa_arch = "aarch64-linux-gnu"
+            else:
+                alsa_arch = "x86_64-linux-gnu"
+            self.env["PROTON_PIPEWIRE_ALSA_PLUGIN"] = os.path.join(
+                    g_proton.lib_dir, alsa_arch, "alsa-lib",
+                    "libasound_module_pcm_pipewire.so")
+
         if "PROTON_CPU_TOPOLOGY" in self.env:
             self.env["WINE_CPU_TOPOLOGY"] = self.env["PROTON_CPU_TOPOLOGY"]
         elif appid in default_cpu_limit:
@@ -2140,6 +2212,13 @@ class Session:
         self.check_environment("PROTON_USE_WAYLAND", "wayland")
         self.check_environment("PROTON_PREFER_SDL", "sdlinput")
         self.check_environment("PROTON_USE_SDL", "sdlinput")
+
+        # Sony controllers need hidraw to feed the XInput-backed Steam Input
+        # fallback. Native Xbox controllers continue to use their XInput slot.
+        if self.env.get("PROTON_STEAMINPUT_XINPUT_FALLBACK") == "1":
+            self.compat_config.discard("sdlinput")
+            self.env.pop("PROTON_DISABLE_HIDRAW", None)
+
         self.check_environment("PROTON_NATIVE_AGS", "nativeags")
         self.check_environment("PROTON_FSR3_UPGRADE", "fsr3")
         self.check_environment("PROTON_FSR4_UPGRADE", "fsr4")
