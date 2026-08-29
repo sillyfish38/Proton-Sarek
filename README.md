@@ -5,7 +5,9 @@ This repository contains the Proton patches used to make Proton-Sarek releases. 
 
 Proton-Sarek uses [DXVK-Sarek](https://github.com/pythonlover02/DXVK-Sarek). Check the repository for more information.
 
-Async builds are deprecated, since DXVK-Sarek now includes **dyasync** enabled by default (use in multiplayer games at your own discretion). Dyasync can be disabled by setting `dxvk.enableDyasync = False` in `dxvk.conf`, in the `DXVK_CONFIG` environment variable, or by using the environment variable `DXVK_DISABLE_DYASYNC=1`.
+You can pick DXVK-Sarek shader compilation method with `dxvk.shaderCompilationMethod` in `dxvk.conf`, or with the `DXVK_SHADER_COMPILATION_METHOD` environment variable. `dxvk.numShaderCompilerThreads` sets how many background threads whichever method is active gets to use, and `DXVK_ALL_CORES=1` is there for CPUs that need every core to get decent throughput.
+
+For any information related to **Frame Rate Limit, Device Filter**, **State Cache**, **Shader Compilation**, **Frame Pacing (low-latency mode)**, and debugging, see the [DXVK-Sarek readme](https://github.com/pythonlover02/DXVK-Sarek).
 
 [D7VK](https://github.com/WinterSnowfall/d7vk) (D3D7/6/5/3 support) features have been ported to DXVK-Sarek. To use the added D3D3, 5, 6 and 7 support in Proton-Sarek, you need the `PROTON_USE_D7VK=1` environment variable.
 
